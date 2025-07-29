@@ -1507,6 +1507,15 @@ public class SRMConfig extends Config {
     )
     public static boolean playerToEtherwarp = false;
 
+    @Switch(
+            name = "Next Step Tracer",
+            description = "Draws a tracer line to the next step in the route (etherwarp, interact, mine, etc.) with color matching the action type",
+            size = 2,
+            category = "Rendering",
+            subcategory = "Lines"
+    )
+    public static boolean nextStepTracer = false;
+
     @Checkbox(
             name = "debug",
             category = "Dev",
