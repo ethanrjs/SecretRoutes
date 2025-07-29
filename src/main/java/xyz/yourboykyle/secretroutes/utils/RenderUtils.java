@@ -269,9 +269,8 @@ public class RenderUtils {
         double py = p.prevPosY + (p.posY - p.prevPosY)*partialticks;
         double pz = p.prevPosZ + (p.posZ - p.prevPosZ)*partialticks;
 
-
-
-        drawNormalLine(px, py+p.getEyeHeight(), pz, pos.getX()+0.5, pos.getY(), pos.getZ() +0.5, color, partialticks, false, width);
+        // Use fixed eye height (1.62) instead of p.getEyeHeight() to prevent bobbing when looking up/down
+        drawNormalLine(px, py+1.62, pz, pos.getX()+0.5, pos.getY(), pos.getZ() +0.5, color, partialticks, false, width);
     }
 
     public static void drawFromPlayer(EntityPlayerSP p, double x, double y, double z, OneColor color, float partialticks, int width){
@@ -280,9 +279,8 @@ public class RenderUtils {
         double py = p.prevPosY + (p.posY - p.prevPosY)*partialticks;
         double pz = p.prevPosZ + (p.posZ - p.prevPosZ)*partialticks;
 
-
-
-        drawNormalLine(px, py+p.getEyeHeight(), pz, x+0.5, y, z+0.5, color, partialticks, false, width);
+        // Use fixed eye height (1.62) instead of p.getEyeHeight() to prevent bobbing when looking up/down
+        drawNormalLine(px, py+1.62, pz, x+0.5, y, z+0.5, color, partialticks, false, width);
     }
 
 }

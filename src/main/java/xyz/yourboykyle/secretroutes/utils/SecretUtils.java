@@ -560,25 +560,19 @@ public class SecretUtils {
             
             BlockPos playerPos = player.getPosition();
             
-            // Check etherwarps first - find the next etherwarp the player hasn't reached yet
-            if (currentSecretWaypoints.get("etherwarps") != null && SRMConfig.renderEtherwarps) {
-                JsonArray etherwarpLocations = currentSecretWaypoints.get("etherwarps").getAsJsonArray();
-                for (JsonElement etherwarpLocationElement : etherwarpLocations) {
-                    JsonArray etherwarpLocation = etherwarpLocationElement.getAsJsonArray();
+            // Check TNTs (superbooms) first - always show these regardless of distance
+            if (currentSecretWaypoints.get("tnts") != null && SRMConfig.renderSuperboom) {
+                JsonArray tntLocations = currentSecretWaypoints.get("tnts").getAsJsonArray();
+                if (tntLocations.size() > 0) {
+                    JsonArray tntLocation = tntLocations.get(0).getAsJsonArray();
                     Main.checkRoomData();
-                    BlockPos etherwarpPos = MapUtils.relativeToActual(
-                        new BlockPos(etherwarpLocation.get(0).getAsInt(), etherwarpLocation.get(1).getAsInt(), etherwarpLocation.get(2).getAsInt()), 
+                    return MapUtils.relativeToActual(
+                        new BlockPos(tntLocation.get(0).getAsInt(), tntLocation.get(1).getAsInt(), tntLocation.get(2).getAsInt()), 
                         RoomDetection.roomDirection, RoomDetection.roomCorner);
-                    
-                    // Check if player is within 3 blocks of this etherwarp (hasn't reached it yet)
-                    double distance = playerPos.distanceSq(etherwarpPos);
-                    if (distance > 9) { // More than 3 blocks away
-                        return etherwarpPos;
-                    }
                 }
             }
             
-            // Check mines next
+            // Check mines next - always show these regardless of distance
             if (currentSecretWaypoints.get("mines") != null && SRMConfig.renderMines) {
                 JsonArray mineLocations = currentSecretWaypoints.get("mines").getAsJsonArray();
                 if (mineLocations.size() > 0) {
@@ -590,7 +584,7 @@ public class SecretUtils {
                 }
             }
             
-            // Check interacts
+            // Check interacts - always show these regardless of distance
             if (currentSecretWaypoints.get("interacts") != null && SRMConfig.renderInteracts) {
                 JsonArray interactLocations = currentSecretWaypoints.get("interacts").getAsJsonArray();
                 if (interactLocations.size() > 0) {
@@ -602,15 +596,21 @@ public class SecretUtils {
                 }
             }
             
-            // Check TNTs (superbooms)
-            if (currentSecretWaypoints.get("tnts") != null && SRMConfig.renderSuperboom) {
-                JsonArray tntLocations = currentSecretWaypoints.get("tnts").getAsJsonArray();
-                if (tntLocations.size() > 0) {
-                    JsonArray tntLocation = tntLocations.get(0).getAsJsonArray();
+            // Check etherwarps last - only show when player is close (within 3 blocks)
+            if (currentSecretWaypoints.get("etherwarps") != null && SRMConfig.renderEtherwarps) {
+                JsonArray etherwarpLocations = currentSecretWaypoints.get("etherwarps").getAsJsonArray();
+                for (JsonElement etherwarpLocationElement : etherwarpLocations) {
+                    JsonArray etherwarpLocation = etherwarpLocationElement.getAsJsonArray();
                     Main.checkRoomData();
-                    return MapUtils.relativeToActual(
-                        new BlockPos(tntLocation.get(0).getAsInt(), tntLocation.get(1).getAsInt(), tntLocation.get(2).getAsInt()), 
+                    BlockPos etherwarpPos = MapUtils.relativeToActual(
+                        new BlockPos(etherwarpLocation.get(0).getAsInt(), etherwarpLocation.get(1).getAsInt(), etherwarpLocation.get(2).getAsInt()), 
                         RoomDetection.roomDirection, RoomDetection.roomCorner);
+                    
+                    // Check if player is within 3 blocks of this etherwarp (close enough to show tracer)
+                    double distance = playerPos.distanceSq(etherwarpPos);
+                    if (distance <= 9) { // Within 3 blocks - show tracer
+                        return etherwarpPos;
+                    }
                 }
             }
             
@@ -651,7 +651,31 @@ public class SecretUtils {
             
             BlockPos playerPos = player.getPosition();
             
-            // Check etherwarps first - find the next etherwarp the player hasn't reached yet
+            // Check TNTs (superbooms) first - always show these regardless of distance
+            if (currentSecretWaypoints.get("tnts") != null && SRMConfig.renderSuperboom) {
+                JsonArray tntLocations = currentSecretWaypoints.get("tnts").getAsJsonArray();
+                if (tntLocations.size() > 0) {
+                    return SRMConfig.superbooms; // Superboom color
+                }
+            }
+            
+            // Check mines next - always show these regardless of distance
+            if (currentSecretWaypoints.get("mines") != null && SRMConfig.renderMines) {
+                JsonArray mineLocations = currentSecretWaypoints.get("mines").getAsJsonArray();
+                if (mineLocations.size() > 0) {
+                    return SRMConfig.mine; // Mine color
+                }
+            }
+            
+            // Check interacts - always show these regardless of distance
+            if (currentSecretWaypoints.get("interacts") != null && SRMConfig.renderInteracts) {
+                JsonArray interactLocations = currentSecretWaypoints.get("interacts").getAsJsonArray();
+                if (interactLocations.size() > 0) {
+                    return SRMConfig.interacts; // Blue for interacts
+                }
+            }
+            
+            // Check etherwarps last - only show when player is close (within 3 blocks)
             if (currentSecretWaypoints.get("etherwarps") != null && SRMConfig.renderEtherwarps) {
                 JsonArray etherwarpLocations = currentSecretWaypoints.get("etherwarps").getAsJsonArray();
                 for (JsonElement etherwarpLocationElement : etherwarpLocations) {
@@ -661,35 +685,11 @@ public class SecretUtils {
                         new BlockPos(etherwarpLocation.get(0).getAsInt(), etherwarpLocation.get(1).getAsInt(), etherwarpLocation.get(2).getAsInt()), 
                         RoomDetection.roomDirection, RoomDetection.roomCorner);
                     
-                    // Check if player is within 3 blocks of this etherwarp (hasn't reached it yet)
+                    // Check if player is within 3 blocks of this etherwarp (close enough to show tracer)
                     double distance = playerPos.distanceSq(etherwarpPos);
-                    if (distance > 9) { // More than 3 blocks away
+                    if (distance <= 9) { // Within 3 blocks - show tracer
                         return SRMConfig.etherWarp; // Purple for etherwarp
                     }
-                }
-            }
-            
-            // Check mines next
-            if (currentSecretWaypoints.get("mines") != null && SRMConfig.renderMines) {
-                JsonArray mineLocations = currentSecretWaypoints.get("mines").getAsJsonArray();
-                if (mineLocations.size() > 0) {
-                    return SRMConfig.mine; // Mine color
-                }
-            }
-            
-            // Check interacts
-            if (currentSecretWaypoints.get("interacts") != null && SRMConfig.renderInteracts) {
-                JsonArray interactLocations = currentSecretWaypoints.get("interacts").getAsJsonArray();
-                if (interactLocations.size() > 0) {
-                    return SRMConfig.interacts; // Blue for interacts
-                }
-            }
-            
-            // Check TNTs (superbooms)
-            if (currentSecretWaypoints.get("tnts") != null && SRMConfig.renderSuperboom) {
-                JsonArray tntLocations = currentSecretWaypoints.get("tnts").getAsJsonArray();
-                if (tntLocations.size() > 0) {
-                    return SRMConfig.superbooms; // Superboom color
                 }
             }
             
