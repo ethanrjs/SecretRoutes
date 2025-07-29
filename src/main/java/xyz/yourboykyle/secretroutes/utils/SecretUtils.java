@@ -78,6 +78,15 @@ public class SecretUtils {
             }
         }
 
+        // Next Step Tracer - draws a line to the next step with appropriate color
+        if(SRMConfig.nextStepTracer && currentSecretWaypoints != null && (!SRMConfig.wholeRoute || index2 == Main.currentRoom.currentSecretIndex)){
+            BlockPos nextStepPos = getNextStepPosition(currentSecretWaypoints);
+            OneColor tracerColor = getNextStepColor(currentSecretWaypoints);
+            if(nextStepPos != null && tracerColor != null){
+                RenderUtils.drawFromPlayer(Minecraft.getMinecraft().thePlayer, nextStepPos.getX(), nextStepPos.getY(), nextStepPos.getZ(), tracerColor, event.partialTicks, SRMConfig.width);
+            }
+        }
+
         // Render the etherwarps
         if (currentSecretWaypoints != null && currentSecretWaypoints.get("etherwarps") != null && (!SRMConfig.wholeRoute || SRMConfig.allSteps || index2 == Main.currentRoom.currentSecretIndex) && SRMConfig.renderEtherwarps) {
             JsonArray etherwarpLocations = currentSecretWaypoints.get("etherwarps").getAsJsonArray();
@@ -538,6 +547,167 @@ public class SecretUtils {
         chestName = null;
         leverName = null;
         leverNumber = null;
+    }
+
+    /**
+     * Determines the next step position for the tracer.
+     * Returns the position of the next action the player needs to perform.
+     */
+    public static BlockPos getNextStepPosition(JsonObject currentSecretWaypoints) {
+        try {
+            EntityPlayerSP player = Minecraft.getMinecraft().thePlayer;
+            if (player == null) return null;
+            
+            BlockPos playerPos = player.getPosition();
+            
+            // Check etherwarps first - find the next etherwarp the player hasn't reached yet
+            if (currentSecretWaypoints.get("etherwarps") != null && SRMConfig.renderEtherwarps) {
+                JsonArray etherwarpLocations = currentSecretWaypoints.get("etherwarps").getAsJsonArray();
+                for (JsonElement etherwarpLocationElement : etherwarpLocations) {
+                    JsonArray etherwarpLocation = etherwarpLocationElement.getAsJsonArray();
+                    Main.checkRoomData();
+                    BlockPos etherwarpPos = MapUtils.relativeToActual(
+                        new BlockPos(etherwarpLocation.get(0).getAsInt(), etherwarpLocation.get(1).getAsInt(), etherwarpLocation.get(2).getAsInt()), 
+                        RoomDetection.roomDirection, RoomDetection.roomCorner);
+                    
+                    // Check if player is within 3 blocks of this etherwarp (hasn't reached it yet)
+                    double distance = playerPos.distanceSq(etherwarpPos);
+                    if (distance > 9) { // More than 3 blocks away
+                        return etherwarpPos;
+                    }
+                }
+            }
+            
+            // Check mines next
+            if (currentSecretWaypoints.get("mines") != null && SRMConfig.renderMines) {
+                JsonArray mineLocations = currentSecretWaypoints.get("mines").getAsJsonArray();
+                if (mineLocations.size() > 0) {
+                    JsonArray mineLocation = mineLocations.get(0).getAsJsonArray();
+                    Main.checkRoomData();
+                    return MapUtils.relativeToActual(
+                        new BlockPos(mineLocation.get(0).getAsInt(), mineLocation.get(1).getAsInt(), mineLocation.get(2).getAsInt()), 
+                        RoomDetection.roomDirection, RoomDetection.roomCorner);
+                }
+            }
+            
+            // Check interacts
+            if (currentSecretWaypoints.get("interacts") != null && SRMConfig.renderInteracts) {
+                JsonArray interactLocations = currentSecretWaypoints.get("interacts").getAsJsonArray();
+                if (interactLocations.size() > 0) {
+                    JsonArray interactLocation = interactLocations.get(0).getAsJsonArray();
+                    Main.checkRoomData();
+                    return MapUtils.relativeToActual(
+                        new BlockPos(interactLocation.get(0).getAsInt(), interactLocation.get(1).getAsInt(), interactLocation.get(2).getAsInt()), 
+                        RoomDetection.roomDirection, RoomDetection.roomCorner);
+                }
+            }
+            
+            // Check TNTs (superbooms)
+            if (currentSecretWaypoints.get("tnts") != null && SRMConfig.renderSuperboom) {
+                JsonArray tntLocations = currentSecretWaypoints.get("tnts").getAsJsonArray();
+                if (tntLocations.size() > 0) {
+                    JsonArray tntLocation = tntLocations.get(0).getAsJsonArray();
+                    Main.checkRoomData();
+                    return MapUtils.relativeToActual(
+                        new BlockPos(tntLocation.get(0).getAsInt(), tntLocation.get(1).getAsInt(), tntLocation.get(2).getAsInt()), 
+                        RoomDetection.roomDirection, RoomDetection.roomCorner);
+                }
+            }
+            
+            // Check enderpearls
+            if (currentSecretWaypoints.get("enderpearls") != null && SRMConfig.renderEnderpearls) {
+                JsonArray enderpearlLocations = currentSecretWaypoints.get("enderpearls").getAsJsonArray();
+                if (enderpearlLocations.size() > 0) {
+                    JsonArray enderpearlLocation = enderpearlLocations.get(0).getAsJsonArray();
+                    Main.checkRoomData();
+                    return MapUtils.relativeToActual(
+                        new BlockPos(enderpearlLocation.get(0).getAsInt(), enderpearlLocation.get(1).getAsInt(), enderpearlLocation.get(2).getAsInt()), 
+                        RoomDetection.roomDirection, RoomDetection.roomCorner);
+                }
+            }
+            
+            // If no other steps, point to the secret location itself
+            if (currentSecretWaypoints.get("secret") != null && currentSecretWaypoints.get("secret").getAsJsonObject().get("location") != null) {
+                JsonArray location = currentSecretWaypoints.get("secret").getAsJsonObject().get("location").getAsJsonArray();
+                Main.checkRoomData();
+                return MapUtils.relativeToActual(
+                    new BlockPos(location.get(0).getAsInt(), location.get(1).getAsInt(), location.get(2).getAsInt()), 
+                    RoomDetection.roomDirection, RoomDetection.roomCorner);
+            }
+            
+        } catch (Exception e) {
+            LogUtils.error(e);
+        }
+        return null;
+    }
+
+    /**
+     * Determines the color for the next step tracer based on the action type.
+     */
+    public static OneColor getNextStepColor(JsonObject currentSecretWaypoints) {
+        try {
+            EntityPlayerSP player = Minecraft.getMinecraft().thePlayer;
+            if (player == null) return null;
+            
+            BlockPos playerPos = player.getPosition();
+            
+            // Check etherwarps first - find the next etherwarp the player hasn't reached yet
+            if (currentSecretWaypoints.get("etherwarps") != null && SRMConfig.renderEtherwarps) {
+                JsonArray etherwarpLocations = currentSecretWaypoints.get("etherwarps").getAsJsonArray();
+                for (JsonElement etherwarpLocationElement : etherwarpLocations) {
+                    JsonArray etherwarpLocation = etherwarpLocationElement.getAsJsonArray();
+                    Main.checkRoomData();
+                    BlockPos etherwarpPos = MapUtils.relativeToActual(
+                        new BlockPos(etherwarpLocation.get(0).getAsInt(), etherwarpLocation.get(1).getAsInt(), etherwarpLocation.get(2).getAsInt()), 
+                        RoomDetection.roomDirection, RoomDetection.roomCorner);
+                    
+                    // Check if player is within 3 blocks of this etherwarp (hasn't reached it yet)
+                    double distance = playerPos.distanceSq(etherwarpPos);
+                    if (distance > 9) { // More than 3 blocks away
+                        return SRMConfig.etherWarp; // Purple for etherwarp
+                    }
+                }
+            }
+            
+            // Check mines next
+            if (currentSecretWaypoints.get("mines") != null && SRMConfig.renderMines) {
+                JsonArray mineLocations = currentSecretWaypoints.get("mines").getAsJsonArray();
+                if (mineLocations.size() > 0) {
+                    return SRMConfig.mine; // Mine color
+                }
+            }
+            
+            // Check interacts
+            if (currentSecretWaypoints.get("interacts") != null && SRMConfig.renderInteracts) {
+                JsonArray interactLocations = currentSecretWaypoints.get("interacts").getAsJsonArray();
+                if (interactLocations.size() > 0) {
+                    return SRMConfig.interacts; // Blue for interacts
+                }
+            }
+            
+            // Check TNTs (superbooms)
+            if (currentSecretWaypoints.get("tnts") != null && SRMConfig.renderSuperboom) {
+                JsonArray tntLocations = currentSecretWaypoints.get("tnts").getAsJsonArray();
+                if (tntLocations.size() > 0) {
+                    return SRMConfig.superbooms; // Superboom color
+                }
+            }
+            
+            // Check enderpearls
+            if (currentSecretWaypoints.get("enderpearls") != null && SRMConfig.renderEnderpearls) {
+                JsonArray enderpearlLocations = currentSecretWaypoints.get("enderpearls").getAsJsonArray();
+                if (enderpearlLocations.size() > 0) {
+                    return SRMConfig.enderpearls; // Enderpearl color
+                }
+            }
+            
+            // Default to line color if pointing to secret
+            return SRMConfig.lineColor;
+            
+        } catch (Exception e) {
+            LogUtils.error(e);
+        }
+        return SRMConfig.lineColor;
     }
 
 }
